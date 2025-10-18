@@ -14,6 +14,121 @@ export type Database = {
   }
   public: {
     Tables: {
+      admins: {
+        Row: {
+          id: string
+          email: string
+          password_hash: string
+          full_name: string
+          is_active: boolean
+          last_login_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          email: string
+          password_hash: string
+          full_name: string
+          is_active?: boolean
+          last_login_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          password_hash?: string
+          full_name?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      admin_activity_logs: {
+        Row: {
+          id: string
+          admin_id: string | null
+          admin_email: string
+          action_type: string
+          description: string
+          metadata: Json
+          ip_address: string | null
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          admin_id?: string | null
+          admin_email: string
+          action_type: string
+          description: string
+          metadata?: Json
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          admin_id?: string | null
+          admin_email?: string
+          action_type?: string
+          description?: string
+          metadata?: Json
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_activity_logs_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: string
+          description: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: string
+          description?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: string
+          description?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budget_alerts: {
         Row: {
           alert_type: string
@@ -131,6 +246,7 @@ export type Database = {
           id: string
           updated_at: string
           user_id: string
+          last_active_at: string | null
         }
         Insert: {
           created_at?: string
@@ -139,6 +255,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id: string
+          last_active_at?: string | null
         }
         Update: {
           created_at?: string
@@ -147,6 +264,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+          last_active_at?: string | null
         }
         Relationships: []
       }

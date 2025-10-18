@@ -88,14 +88,46 @@ Desktop.ini
 *.tmp
 *.temp
 
-# Lock files (uncomment if using npm)
-# package-lock.json
-
-# Vercel
-.vercel
+# Lock files
+yarn.lock
+yarn-error.log
+pnpm-lock.yaml
 
 # Next.js (if using)
 .next/
 
 # Storybook build outputs
 storybook-static
+
+# Claude Code AI Assistant
+.claude/
+.claude/settings.local.json
+
+# Database files (local testing)
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# SQL exports and backups
+*.sql.backup
+*.sql.bak
+dumps/
+exports/
+backups/
+
+# Documentation backups
+*.md.backup
+*.md.bak
+
+# Admin temporary files
+admin-temp/
+*.admin.tmp
+
+# Test coverage
+.nyc_output/
+coverage.json
+
+# Package manager alternatives (using npm)
+.pnpm-store/
+.yarn/
