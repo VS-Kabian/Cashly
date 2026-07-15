@@ -10,7 +10,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Settings, AlertCircle, CheckCircle2, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
-import DOMPurify from 'dompurify';
 
 interface AppSettings {
   maintenance_mode: boolean;
@@ -224,10 +223,10 @@ export default function AdminSettings() {
               {/* Maintenance Message */}
               <div className="space-y-2">
                 <Label htmlFor="maintenance-message" className="text-white">
-                  Maintenance Message (✨ HTML/CSS Supported)
+                  Maintenance Message
                 </Label>
                 <p className="text-sm text-slate-400">
-                  You can use HTML and inline CSS for custom styling, colors, and animations!
+                  Use plain text. Line breaks are preserved in the maintenance message.
                 </p>
                 <Textarea
                   id="maintenance-message"
@@ -236,42 +235,21 @@ export default function AdminSettings() {
                   disabled={saving}
                   rows={6}
                   className="bg-slate-800 border-slate-700 text-white font-mono text-sm"
-                  placeholder='<div style="text-align:center;animation:pulse 2s infinite">🔧 Maintenance in progress...</div>'
+                  placeholder={'🔧 Maintenance in progress...\nPlease check back soon.'}
                 />
-                <div className="flex items-center justify-between">
+                <div>
                   <p className="text-xs text-slate-500">
                     {settings.maintenance_message.length} characters
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const examples = [
-                        '<div style="text-align:center;color:#f59e0b;font-size:20px;animation:fadeInOut 2s infinite">⚠️ We are upgrading our systems. Please check back soon!</div><style>@keyframes fadeInOut{0%,100%{opacity:0.5}50%{opacity:1}}</style>',
-                        '<div style="text-align:center;background:linear-gradient(45deg,#667eea,#764ba2);padding:20px;border-radius:10px;color:white;font-weight:bold;box-shadow:0 10px 30px rgba(0,0,0,0.3)">🚀 Exciting updates coming! Be right back.</div>',
-                        '<div style="text-align:center;font-size:18px"><span style="display:inline-block;animation:bounce 1s infinite">🔧</span> Maintenance Mode <span style="display:inline-block;animation:bounce 1s infinite;animation-delay:0.3s">⚙️</span></div><style>@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}</style>',
-                      ];
-                      const random = examples[Math.floor(Math.random() * examples.length)];
-                      handleMessageChange(random);
-                    }}
-                    className="text-xs text-purple-400 hover:text-purple-300 underline"
-                  >
-                    Use Example Template
-                  </button>
                 </div>
 
                 {/* Live Preview */}
                 {settings.maintenance_message && (
                   <div className="mt-3 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
                     <p className="text-xs text-slate-400 mb-2 font-semibold">Live Preview:</p>
-                    <div
-                      className="min-h-[60px] flex items-center justify-center"
-                      dangerouslySetInnerHTML={{
-                        __html: DOMPurify.sanitize(settings.maintenance_message, {
-                          ALLOWED_TAGS: ['div', 'span', 'p', 'br', 'b', 'i', 'u', 'strong', 'em', 'style'],
-                          ALLOWED_ATTR: ['style', 'class'],
-                        })
-                      }}
-                    />
+                    <div className="min-h-[60px] flex items-center justify-center whitespace-pre-line break-words text-center">
+                      {settings.maintenance_message}
+                    </div>
                   </div>
                 )}
               </div>

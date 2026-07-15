@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wrench, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import DOMPurify from 'dompurify';
 
 interface MaintenanceModeProps {
   children: React.ReactNode;
@@ -103,19 +102,9 @@ export default function MaintenanceMode({ children }: MaintenanceModeProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Render HTML/CSS maintenance message (set by admin) - sanitized for security */}
-            <div
-              className="text-center text-muted-foreground"
-              dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(
-                  maintenanceMessage || 'We are currently performing maintenance. Please check back soon.',
-                  {
-                    ALLOWED_TAGS: ['div', 'span', 'p', 'br', 'b', 'i', 'u', 'strong', 'em', 'style'],
-                    ALLOWED_ATTR: ['style', 'class'],
-                  }
-                )
-              }}
-            />
+            <div className="text-center text-muted-foreground whitespace-pre-line break-words">
+              {maintenanceMessage || 'We are currently performing maintenance. Please check back soon.'}
+            </div>
             <div className="pt-4">
               <Button
                 onClick={handleRefresh}
