@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const historyModule = await import('../src/hooks/useTransactionHistory.ts').catch(() => null);
+const historyModule = await import('../src/features/transactions/transactionHistoryQueryPlan.ts').catch(() => null);
 
 test('transaction history uses a stable, range-limited query plan for equivalent filters', () => {
   assert.ok(historyModule, 'transaction history query module must exist');

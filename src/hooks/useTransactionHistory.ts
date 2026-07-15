@@ -3,16 +3,19 @@ import {
   fetchTransactionHistoryCategories,
   fetchTransactionHistoryPage,
 } from '@/features/transactions/transactionRepository';
-import { sanitizeTransactionSearchTerm } from '@/features/transactions/transactionSearch';
+import {
+  buildTransactionHistoryQueryPlan,
+  TRANSACTION_HISTORY_PAGE_SIZE,
+  type TransactionHistoryFilters,
+} from '@/features/transactions/transactionHistoryQueryPlan';
 
-export const TRANSACTION_HISTORY_PAGE_SIZE = 50;
-
-export interface TransactionHistoryFilters {
-  searchTerm?: string;
-  selectedMonth?: string;
-  categoryId?: string;
-  type?: 'income' | 'expense' | null;
-}
+export {
+  buildTransactionHistoryQueryPlan,
+  getTransactionHistoryMonthRange,
+  normalizeTransactionHistoryFilters,
+  TRANSACTION_HISTORY_PAGE_SIZE,
+  type TransactionHistoryFilters,
+} from '@/features/transactions/transactionHistoryQueryPlan';
 
 export interface TransactionHistoryTransaction {
   id: string;
@@ -32,56 +35,6 @@ export interface TransactionHistoryCategory {
   icon: string | null;
   type: 'income' | 'expense';
 }
-
-interface NormalizedFilters {
-  searchTerm: string | null;
-  selectedMonth: string | null;
-  categoryId: string | null;
-  type: 'income' | 'expense' | null;
-}
-
-const normalizeFilters = (filters: TransactionHistoryFilters): NormalizedFilters => ({
-  searchTerm: filters.searchTerm
-    ? sanitizeTransactionSearchTerm(filters.searchTerm).toLowerCase() || null
-    : null,
-  selectedMonth: filters.selectedMonth && filters.selectedMonth !== 'all-months'
-    ? filters.selectedMonth
-    : null,
-  categoryId: filters.categoryId && filters.categoryId !== 'all' ? filters.categoryId : null,
-  type: filters.type || null,
-});
-
-const getMonthRange = (selectedMonth: string | null) => {
-  if (!selectedMonth || !/^\d{4}-(0[1-9]|1[0-2])$/.test(selectedMonth)) {
-    return null;
-  }
-
-  const [year, month] = selectedMonth.split('-').map(Number);
-  return {
-    start: new Date(year, month - 1, 1).toISOString(),
-    endExclusive: new Date(year, month, 1).toISOString(),
-  };
-};
-
-export const buildTransactionHistoryQueryPlan = (
-  userId: string,
-  filters: TransactionHistoryFilters,
-  pageIndex: number,
-) => {
-  const normalizedFilters = normalizeFilters(filters);
-  const safePageIndex = Math.max(0, pageIndex);
-  const from = safePageIndex * TRANSACTION_HISTORY_PAGE_SIZE;
-
-  return {
-    filters: normalizedFilters,
-    monthRange: getMonthRange(normalizedFilters.selectedMonth),
-    queryKey: ['transaction-history', userId, normalizedFilters] as const,
-    range: {
-      from,
-      to: from + TRANSACTION_HISTORY_PAGE_SIZE - 1,
-    },
-  };
-};
 
 export const transactionHistoryCategoriesQueryKey = (userId: string) =>
   ['transaction-history-categories', userId] as const;
