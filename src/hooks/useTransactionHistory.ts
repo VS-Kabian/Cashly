@@ -1,4 +1,9 @@
 import { useInfiniteQuery, useQuery, type QueryClient } from '@tanstack/react-query';
+import {
+  fetchTransactionHistoryCategories,
+  fetchTransactionHistoryPage,
+} from '@/features/transactions/transactionRepository';
+import { sanitizeTransactionSearchTerm } from '@/features/transactions/transactionSearch';
 
 export const TRANSACTION_HISTORY_PAGE_SIZE = 50;
 
@@ -36,7 +41,9 @@ interface NormalizedFilters {
 }
 
 const normalizeFilters = (filters: TransactionHistoryFilters): NormalizedFilters => ({
-  searchTerm: filters.searchTerm?.trim().toLowerCase() || null,
+  searchTerm: filters.searchTerm
+    ? sanitizeTransactionSearchTerm(filters.searchTerm).toLowerCase() || null
+    : null,
   selectedMonth: filters.selectedMonth && filters.selectedMonth !== 'all-months'
     ? filters.selectedMonth
     : null,
@@ -85,13 +92,6 @@ export const invalidateTransactionHistory = (queryClient: QueryClient, userId: s
 export const invalidateTransactionHistoryCategories = (queryClient: QueryClient, userId: string) =>
   queryClient.invalidateQueries({ queryKey: transactionHistoryCategoriesQueryKey(userId) });
 
-const getSupabase = async () => {
-  const { supabase } = await import('@/integrations/supabase/client');
-  return supabase;
-};
-
-const toSafeSearchTerm = (searchTerm: string) => searchTerm.replace(/[,.()]/g, ' ');
-
 export const useTransactionHistory = (userId: string | undefined, filters: TransactionHistoryFilters) => {
   const initialPlan = buildTransactionHistoryQueryPlan(userId || '', filters, 0);
 
@@ -105,57 +105,7 @@ export const useTransactionHistory = (userId: string | undefined, filters: Trans
       }
 
       const plan = buildTransactionHistoryQueryPlan(userId, filters, pageParam);
-      const supabase = await getSupabase();
-      let matchingCategoryIds: string[] = [];
-
-      if (plan.filters.searchTerm) {
-        const { data: matchingCategories, error: categoryError } = await supabase
-          .from('categories')
-          .select('id')
-          .eq('user_id', userId)
-          .ilike('name', `%${toSafeSearchTerm(plan.filters.searchTerm)}%`);
-
-        if (categoryError) throw categoryError;
-        matchingCategoryIds = (matchingCategories || []).map((category) => category.id);
-      }
-
-      let query = supabase
-        .from('transactions')
-        .select(`
-          id,
-          amount,
-          category_id,
-          type,
-          transaction_date,
-          description,
-          payment_method,
-          categories (name, color)
-        `)
-        .eq('user_id', userId)
-        .order('transaction_date', { ascending: false })
-        .order('id', { ascending: false })
-        .range(plan.range.from, plan.range.to);
-
-      if (plan.filters.categoryId) query = query.eq('category_id', plan.filters.categoryId);
-      if (plan.filters.type) query = query.eq('type', plan.filters.type);
-      if (plan.monthRange) {
-        query = query
-          .gte('transaction_date', plan.monthRange.start)
-          .lt('transaction_date', plan.monthRange.endExclusive);
-      }
-      if (plan.filters.searchTerm) {
-        const search = toSafeSearchTerm(plan.filters.searchTerm);
-        const conditions = [`description.ilike.%${search}%`];
-        if (matchingCategoryIds.length > 0) {
-          conditions.push(`category_id.in.(${matchingCategoryIds.join(',')})`);
-        }
-        query = query.or(conditions.join(','));
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return (data || []) as unknown as TransactionHistoryTransaction[];
+      return fetchTransactionHistoryPage(userId, plan);
     },
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length === TRANSACTION_HISTORY_PAGE_SIZE ? allPages.length : undefined,
@@ -169,15 +119,7 @@ export const useTransactionHistoryCategories = (userId: string | undefined) => {
     queryFn: async () => {
       if (!userId) return [] as TransactionHistoryCategory[];
 
-      const supabase = await getSupabase();
-      const { data, error } = await supabase
-        .from('categories')
-        .select('id, name, color, icon, type')
-        .eq('user_id', userId)
-        .order('name');
-
-      if (error) throw error;
-      return (data || []) as TransactionHistoryCategory[];
+      return fetchTransactionHistoryCategories(userId);
     },
   });
 };
