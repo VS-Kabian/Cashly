@@ -1,5 +1,7 @@
 # 🚀 VERCEL DEPLOYMENT GUIDE - BoltCash with Admin Panel
 
+> **Security notice (2026-07-14):** The legacy custom-password administrator instructions below are superseded. Before deploying, follow [ADMIN_GUIDE.md](ADMIN_GUIDE.md) and apply `20260714000000_harden_admin_authorization.sql`. Administrators must be Supabase Auth users linked through `admins.user_id`.
+
 **Complete Step-by-Step Guide to Deploy BoltCash to Vercel**
 **Includes: Super Mario Admin Panel, Supabase Setup, Environment Variables**
 

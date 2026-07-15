@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, TrendingUp, TrendingDown, Calendar, Eye, EyeOff, Wallet, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { calculateBudgetSummary, formatCurrency, getBudgetStatusColor, getBudgetStatusText, generateBudgetRecommendation, BudgetSummary } from '@/utils/budgetCalculations';
+import { toLocalDateKey } from '@/utils/dateRanges';
 
 interface Transaction {
   id: string;
@@ -99,9 +100,9 @@ export default function Dashboard() {
       setMonthlyExpenses(expenses);
 
       // Calculate today's income and expenses
-      const today = new Date().toISOString().split('T')[0];
+      const today = toLocalDateKey(new Date());
       const todayTransactions = typedTransactions.filter(transaction => 
-        transaction.transaction_date.split('T')[0] === today
+        toLocalDateKey(new Date(transaction.transaction_date)) === today
       );
       
       const todayIncome = todayTransactions
@@ -161,12 +162,12 @@ export default function Dashboard() {
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - (6 - i));
-      return date.toISOString().split('T')[0];
+      return toLocalDateKey(date);
     });
 
     return last7Days.map(date => {
       const dayTransactions = transactions.filter(t => 
-        t.transaction_date.split('T')[0] === date
+        toLocalDateKey(new Date(t.transaction_date)) === date
       );
       
       const dayBalance = dayTransactions.reduce((sum, transaction) => {
@@ -176,7 +177,7 @@ export default function Dashboard() {
       }, 0);
 
       return {
-        date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+        date: new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' }),
         balance: dayBalance
       };
     });

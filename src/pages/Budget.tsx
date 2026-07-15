@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { getLocalMonthRange } from '@/utils/dateRanges';
 import { DollarSign, TrendingUp, TrendingDown, AlertTriangle, Calendar, Target } from 'lucide-react';
 
 interface Budget {
@@ -125,22 +126,22 @@ export default function Budget() {
       const totalBudget = budgetData?.reduce((sum, b) => sum + Number(b.amount), 0) || 0;
 
       // Get total spent for current month
-      const startOfMonth = new Date(currentYear, currentMonth - 1, 1);
-      const endOfMonth = new Date(currentYear, currentMonth, 0);
+      const { start, endExclusive } = getLocalMonthRange(currentYear, currentMonth - 1);
 
       const { data: transactionData, error: transactionError } = await supabase
         .from('transactions')
         .select('amount')
         .eq('user_id', user?.id)
         .eq('type', 'expense')
-        .gte('transaction_date', startOfMonth.toISOString())
-        .lte('transaction_date', endOfMonth.toISOString());
+        .gte('transaction_date', start.toISOString())
+        .lt('transaction_date', endExclusive.toISOString());
 
       if (transactionError) throw transactionError;
 
       const totalSpent = transactionData?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
       const remaining = totalBudget - totalSpent;
-      const daysLeft = Math.max(0, endOfMonth.getDate() - currentDate.getDate() + 1);
+      const lastDayOfMonth = new Date(endExclusive.getTime() - 1);
+      const daysLeft = Math.max(0, lastDayOfMonth.getDate() - currentDate.getDate() + 1);
       const dailyAllowance = daysLeft > 0 ? remaining / daysLeft : 0;
       const percentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
@@ -169,17 +170,44 @@ export default function Budget() {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('budgets')
-        .upsert({
-          user_id: user?.id,
-          amount: parseFloat(newBudgetAmount),
-          category_id: selectedCategory === 'total' ? null : selectedCategory,
-          month: currentMonth,
-          year: currentYear
-        });
+      const budget = {
+        user_id: user?.id,
+        amount: parseFloat(newBudgetAmount),
+        category_id: selectedCategory === 'total' ? null : selectedCategory,
+        month: currentMonth,
+        year: currentYear
+      };
 
-      if (error) throw error;
+      if (selectedCategory === 'total') {
+        const { data: existingBudget, error: existingBudgetError } = await supabase
+          .from('budgets')
+          .select('id')
+          .eq('user_id', user?.id)
+          .eq('month', currentMonth)
+          .eq('year', currentYear)
+          .is('category_id', null)
+          .maybeSingle();
+
+        if (existingBudgetError) throw existingBudgetError;
+
+        if (existingBudget) {
+          const { error } = await supabase
+            .from('budgets')
+            .update({ amount: budget.amount })
+            .eq('id', existingBudget.id);
+
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('budgets').insert(budget);
+          if (error) throw error;
+        }
+      } else {
+        const { error } = await supabase
+          .from('budgets')
+          .upsert(budget, { onConflict: 'user_id,month,year,category_id' });
+
+        if (error) throw error;
+      }
 
       toast({
         title: "Success",

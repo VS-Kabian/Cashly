@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { getLocalMonthRange } from '@/utils/dateRanges';
 
 interface Transaction {
   id: string;
@@ -41,9 +42,10 @@ export default function CalendarView() {
     try {
       setLoading(true);
       
-      // Get first and last day of the month
-      const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      const { start, endExclusive } = getLocalMonthRange(
+        currentDate.getFullYear(),
+        currentDate.getMonth()
+      );
 
       const { data: transactionsData, error } = await supabase
         .from('transactions')
@@ -59,8 +61,8 @@ export default function CalendarView() {
           )
         `)
         .eq('user_id', user?.id)
-        .gte('transaction_date', firstDay.toISOString().split('T')[0])
-        .lte('transaction_date', lastDay.toISOString().split('T')[0])
+        .gte('transaction_date', start.toISOString())
+        .lt('transaction_date', endExclusive.toISOString())
         .order('transaction_date', { ascending: false });
 
       if (error) throw error;

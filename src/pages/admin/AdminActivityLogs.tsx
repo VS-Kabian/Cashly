@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,7 @@ interface ActivityLog {
   admin_email: string;
   action_type: string;
   description: string;
-  metadata: Record<string, any>;
+  metadata: Json;
   created_at: string;
 }
 

@@ -22,6 +22,7 @@ export type Database = {
           full_name: string
           is_active: boolean
           last_login_at: string | null
+          user_id: string | null
           created_at: string
           updated_at: string
         }
@@ -32,6 +33,7 @@ export type Database = {
           full_name: string
           is_active?: boolean
           last_login_at?: string | null
+          user_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -42,6 +44,7 @@ export type Database = {
           full_name?: string
           is_active?: boolean
           last_login_at?: string | null
+          user_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -320,7 +323,35 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      authenticate_admin: {
+        Args: { p_email: string; p_password: string }
+        Returns: Json
+      }
+      get_admin_dashboard_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_users: number
+          total_transactions: number
+          daily_active_users: number
+          monthly_active_users: number
+          total_income: number
+          total_expense: number
+          avg_transaction_value: number
+        }
+      }
+      get_top_categories: {
+        Args: { p_limit?: number }
+        Returns: {
+          category_name: string
+          category_type: string
+          transaction_count: number
+          total_amount: number
+        }[]
+      }
+      log_admin_activity: {
+        Args: { p_action_type: string; p_description: string; p_metadata?: Json }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +12,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Loader2, AlertTriangle, Wallet } from 'lucide-react';
 import { calculateBudgetSummary, formatCurrency, BudgetSummary } from '@/utils/budgetCalculations';
+import { getLocalMonthRange, toLocalDateKey } from '@/utils/dateRanges';
+import { invalidateTransactionHistory } from '@/hooks/useTransactionHistory';
 
 interface Category {
   id: string;
@@ -20,21 +23,37 @@ interface Category {
   icon?: string;
 }
 
+type ValidationErrors = Partial<Record<'amount' | 'categoryId' | 'transactionDate', string>>;
+
+function isValidLocalDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+
+  const [, year, month, day] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+
+  return date.getFullYear() === Number(year)
+    && date.getMonth() === Number(month) - 1
+    && date.getDate() === Number(day);
+}
+
 export default function AddTransaction() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
   const [budgetImpact, setBudgetImpact] = useState<{remaining: number; willExceed: boolean} | null>(null);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [formData, setFormData] = useState({
     amount: '',
     categoryId: '',
     description: '',
     paymentMethod: 'cash',
-    transactionDate: new Date().toISOString().split('T')[0]
+    transactionDate: toLocalDateKey(new Date())
   });
 
   useEffect(() => {
@@ -79,6 +98,11 @@ export default function AddTransaction() {
       const currentYear = new Date().getFullYear();
       const transactionAmount = parseFloat(formData.amount);
 
+      if (!Number.isFinite(transactionAmount) || transactionAmount <= 0) {
+        setBudgetImpact(null);
+        return;
+      }
+
       // Get current month's budget
       const { data: budgetData } = await supabase
         .from('budgets')
@@ -92,16 +116,15 @@ export default function AddTransaction() {
       const totalBudget = budgetData.reduce((sum, b) => sum + Number(b.amount), 0);
 
       // Get current month's expenses
-      const startOfMonth = new Date(currentYear, currentMonth - 1, 1);
-      const endOfMonth = new Date(currentYear, currentMonth, 0);
+      const { start, endExclusive } = getLocalMonthRange(currentYear, currentMonth - 1);
 
       const { data: transactionData } = await supabase
         .from('transactions')
         .select('amount')
         .eq('user_id', user.id)
         .eq('type', 'expense')
-        .gte('transaction_date', startOfMonth.toISOString())
-        .lte('transaction_date', endOfMonth.toISOString());
+        .gte('transaction_date', start.toISOString())
+        .lt('transaction_date', endExclusive.toISOString());
 
       const currentSpent = transactionData?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
       const remaining = totalBudget - currentSpent;
@@ -141,13 +164,23 @@ export default function AddTransaction() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.amount || !formData.categoryId) {
-      toast({
-        variant: "destructive",
-        title: "Missing Information",
-        description: "Please fill in all required fields"
-      });
+
+    const amount = Number(formData.amount);
+    const errors: ValidationErrors = {};
+
+    if (!(Number.isFinite(amount) && amount > 0)) {
+      errors.amount = 'Enter an amount greater than zero.';
+    }
+    if (!formData.categoryId) {
+      errors.categoryId = 'Select a category.';
+    }
+    if (!isValidLocalDate(formData.transactionDate)) {
+      errors.transactionDate = 'Enter a valid transaction date.';
+    }
+
+    setValidationErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
       return;
     }
 
@@ -158,15 +191,19 @@ export default function AddTransaction() {
         .from('transactions')
         .insert({
           user_id: user?.id,
-          amount: parseFloat(formData.amount),
+          amount,
           type: transactionType,
           category_id: formData.categoryId,
           description: formData.description || null,
           payment_method: formData.paymentMethod,
-          transaction_date: new Date(formData.transactionDate).toISOString()
+          transaction_date: new Date(`${formData.transactionDate}T00:00:00`).toISOString()
         });
 
       if (error) throw error;
+
+      if (user) {
+        await invalidateTransactionHistory(queryClient, user.id);
+      }
 
       toast({
         title: "Success",
@@ -243,10 +280,20 @@ export default function AddTransaction() {
                   placeholder="0.00"
                   className="pl-8 text-lg bg-transparent border-border/50 text-foreground"
                   value={formData.amount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, amount: e.target.value }));
+                    setValidationErrors(prev => ({ ...prev, amount: undefined }));
+                  }}
+                  aria-invalid={Boolean(validationErrors.amount)}
+                  aria-describedby={validationErrors.amount ? 'amount-error' : undefined}
                   required
                 />
               </div>
+              {validationErrors.amount && (
+                <p id="amount-error" className="mt-2 text-sm text-destructive" role="alert">
+                  {validationErrors.amount}
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -283,8 +330,15 @@ export default function AddTransaction() {
           {/* Category */}
           <div className="space-y-2">
             <Label htmlFor="category">Category *</Label>
-            <Select value={formData.categoryId} onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}>
-              <SelectTrigger>
+            <Select value={formData.categoryId} onValueChange={(value) => {
+              setFormData(prev => ({ ...prev, categoryId: value }));
+              setValidationErrors(prev => ({ ...prev, categoryId: undefined }));
+            }}>
+              <SelectTrigger
+                id="category"
+                aria-invalid={Boolean(validationErrors.categoryId)}
+                aria-describedby={validationErrors.categoryId ? 'category-error' : undefined}
+              >
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent className="bg-card border z-50">
@@ -302,6 +356,11 @@ export default function AddTransaction() {
                 ))}
               </SelectContent>
             </Select>
+            {validationErrors.categoryId && (
+              <p id="category-error" className="text-sm text-destructive" role="alert">
+                {validationErrors.categoryId}
+              </p>
+            )}
           </div>
 
           {/* Description */}
@@ -323,8 +382,18 @@ export default function AddTransaction() {
               id="date"
               type="date"
               value={formData.transactionDate}
-              onChange={(e) => setFormData(prev => ({ ...prev, transactionDate: e.target.value }))}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, transactionDate: e.target.value }));
+                setValidationErrors(prev => ({ ...prev, transactionDate: undefined }));
+              }}
+              aria-invalid={Boolean(validationErrors.transactionDate)}
+              aria-describedby={validationErrors.transactionDate ? 'date-error' : undefined}
             />
+            {validationErrors.transactionDate && (
+              <p id="date-error" className="text-sm text-destructive" role="alert">
+                {validationErrors.transactionDate}
+              </p>
+            )}
           </div>
 
           {/* Payment Method */}

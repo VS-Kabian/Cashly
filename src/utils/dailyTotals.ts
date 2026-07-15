@@ -1,4 +1,5 @@
 // Utility functions for computing daily and monthly totals
+import { toLocalDateKey } from './dateRanges';
 
 export interface Transaction {
   amount: number;
@@ -6,9 +7,9 @@ export interface Transaction {
   transaction_date: string;
 }
 
-export function computeDailyTotals(transactions: Transaction[], date: string = new Date().toISOString().split('T')[0]) {
+export function computeDailyTotals(transactions: Transaction[], date: string = toLocalDateKey(new Date())) {
   const dayTransactions = transactions.filter(transaction => 
-    transaction.transaction_date.split('T')[0] === date
+    toLocalDateKey(new Date(transaction.transaction_date)) === date
   );
   
   const dailyIncome = dayTransactions

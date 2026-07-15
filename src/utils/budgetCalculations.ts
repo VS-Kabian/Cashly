@@ -1,3 +1,5 @@
+import { getLocalMonthRange } from './dateRanges';
+
 interface Transaction {
   amount: number;
   type: 'income' | 'expense';
@@ -29,15 +31,14 @@ export const calculateBudgetSummary = (
   const totalBudget = budgets.reduce((sum, budget) => sum + budget.amount, 0);
 
   // Calculate total spent for the month
-  const startOfMonth = new Date(year, month - 1, 1);
-  const endOfMonth = new Date(year, month, 0);
+  const { start, endExclusive } = getLocalMonthRange(year, month - 1);
   
   const monthlyExpenses = transactions.filter(t => {
     const transactionDate = new Date(t.transaction_date);
     return (
       t.type === 'expense' &&
-      transactionDate >= startOfMonth &&
-      transactionDate <= endOfMonth
+      transactionDate >= start &&
+      transactionDate < endExclusive
     );
   });
 
@@ -48,7 +49,7 @@ export const calculateBudgetSummary = (
 
   // Calculate days left in month
   const today = new Date();
-  const lastDay = new Date(year, month, 0);
+  const lastDay = new Date(endExclusive.getTime() - 1);
   const daysLeft = Math.max(0, lastDay.getDate() - today.getDate() + 1);
 
   // Calculate daily allowance

@@ -34,8 +34,8 @@ BoltCash is a lightweight, fast finance management app focused on frictionless t
 - **Dashboard Analytics** - Real-time metrics: users, transactions, DAU/MAU, top categories
 - **Maintenance Mode** - Toggle with custom HTML/CSS messages (XSS protected with DOMPurify)
 - **Activity Logs** - Complete audit trail of all admin actions with search/filter
-- **Separate Auth** - Independent admin authentication system
-- **Access:** `/admin/login` - Default: `admin@example.com` / `YourSecurePassword123`
+- **Supabase Auth + Role Check** - Admin access requires a verified Supabase Auth session linked to an active administrator record
+- **Access:** `/admin/login`
 
 ## Tech Stack
 React 18 · TypeScript · Vite · Tailwind + shadcn/ui · Supabase (Auth + Postgres + Storage) · Recharts · DOMPurify · ESLint
@@ -59,13 +59,12 @@ VITE_SUPABASE_URL=""
 ```
 
 ### Admin Setup
-1. Go to Supabase Dashboard → SQL Editor
-2. Open `supabase/migrations/20251018000000_create_admin_system.sql`
-3. **Edit lines 270-273:** Change default admin email/password
-4. Copy & paste entire SQL into Supabase SQL Editor
-5. Click **Run**
-6. Access admin panel: `http://localhost:8080/admin/login`
-7. ⚠️ **For production:** Run `20251018000001_production_password_security.sql` for bcrypt hashing
+1. Create the administrator in **Supabase Dashboard → Authentication → Users** using the email that should access `/admin`.
+2. Apply the regular schema migrations, then apply `supabase/migrations/20260714000000_harden_admin_authorization.sql`.
+3. The hardening migration links an existing `admins` record to a matching Auth user by email. If the Auth user was created later, follow [Docs/ADMIN_GUIDE.md](Docs/ADMIN_GUIDE.md) to link it manually.
+4. Sign in at `/admin/login` with the Supabase Auth credentials.
+
+The legacy custom-password administrator flow is retired. Do not expose service-role keys in the browser or restore the retired password RPCs.
 
 ## Database / Schema
 All SQL (tables, indexes, RLS policies, views, migrations) lives in: `supabase/migrations/` → The README intentionally omits SQL for brevity.
@@ -79,13 +78,14 @@ All SQL (tables, indexes, RLS policies, views, migrations) lives in: `supabase/m
 | `npm run build` | Production build |
 | `npm run preview` | Preview dist |
 | `npm run lint` | Lint code |
+| `npm test` | Run repository security-contract tests |
 
 ## Deployment
 Build output: `npm run build` → `dist/`
 Deploy to Netlify, Vercel or any static host (SPA rewrite to `/index.html`).
 
 **Before deploying:**
-1. Run admin migration in Supabase (see Admin Setup above)
+1. Create the Supabase Auth administrator and apply the admin-hardening migration (see Admin Setup above)
 2. Set environment variables in hosting platform (Vercel/Netlify)
 3. Test admin login at `[your-domain]/admin/login`
 
@@ -103,9 +103,8 @@ Full roadmap & issues: use repository Issues board.
 - **Schema / migration problems**: see `supabase/migrations/` (includes full copy‑paste block + repair scripts)
 - **Auth issues**: verify RLS + re-login
 - **Performance**: archive old transactions
-- **Admin login fails**: Run admin migration in Supabase SQL Editor first
-- **"function authenticate_admin does not exist"**: Migration not executed
-- **Admin docs**: See `Docs/ADMIN_GUIDE.md` and `Docs/ULTRA_SYSTEM_CHECK_REPORT.md`
+- **Admin login fails**: Verify the Auth user exists and is linked to an active `admins.user_id` record.
+- **Admin docs**: See `Docs/ADMIN_GUIDE.md`.
 
 ## License
 MIT (see LICENSE)
