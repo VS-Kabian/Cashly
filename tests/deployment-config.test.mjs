@@ -34,6 +34,16 @@ test('the public environment validator rejects a missing Supabase URL or publish
   );
 });
 
+test('the public environment validator rejects HTTPS hosts outside the Supabase CSP allowlist', () => {
+  assert.throws(
+    () => validatePublicEnv({
+      VITE_SUPABASE_URL: 'https://api.example.com',
+      VITE_SUPABASE_PUBLISHABLE_KEY: 'pk_test_value',
+    }),
+    /hosted Supabase endpoint/i,
+  );
+});
+
 test('Vercel config defines the required security header names', async () => {
   const config = JSON.parse(await readFile(path.join(root, 'vercel.json'), 'utf8'));
   const headerNames = config.headers.flatMap((rule) => rule.headers.map((header) => header.key));

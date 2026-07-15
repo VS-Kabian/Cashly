@@ -43,6 +43,10 @@ export function validatePublicEnv(environment) {
   if (supabaseUrl.protocol !== 'https:' || !supabaseUrl.hostname) {
     throw new Error('VITE_SUPABASE_URL must be a valid HTTPS URL.');
   }
+
+  if (!supabaseUrl.hostname.endsWith('.supabase.co')) {
+    throw new Error('VITE_SUPABASE_URL must use a hosted Supabase endpoint.');
+  }
 }
 
 export function loadProductionPublicEnv(root = process.cwd()) {
