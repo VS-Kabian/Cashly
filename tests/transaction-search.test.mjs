@@ -36,7 +36,7 @@ test('transaction history keeps the client import in the repository boundary', a
 
   assert.match(source, /@\/features\/transactions\/transactionRepository/);
   assert.doesNotMatch(source, /await import\('@\/integrations\/supabase\/client'\)/);
-  assert.doesNotMatch(source, /import\s+(?:type\s+)?[\s\S]*?\s+from\s+['"]@\/integrations\/supabase\/client['"]/);
+  assert.doesNotMatch(source, /import(?:\s+(?:type\s+)?[\s\S]*?\s+from)?\s*['"]@\/integrations\/supabase\/client['"]/);
   assert.match(repository, /import \{ supabase \} from '@\/integrations\/supabase\/client'/);
   assert.match(repository, /from '\.\/transactionSearch'/);
 });
