@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,23 +9,31 @@ import { AdminAuthProvider } from "@/hooks/useAdminAuth";
 import Layout from "./components/Layout";
 import AdminLayout from "./components/AdminLayout";
 import MaintenanceMode from "./components/MaintenanceMode";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import AddTransaction from "./pages/AddTransaction";
-import Insights from "./pages/Insights";
-import CalendarView from "./pages/CalendarView";
-import Profile from "./pages/Profile";
-import Settings from "./pages/Settings";
-import CategoryManagement from "./components/CategoryManagement";
-import AllTransactionHistory from "./pages/AllTransactionHistory";
-import Budget from "./pages/Budget";
-import NotFound from "./pages/NotFound";
-// Admin Pages
-import AdminLogin from "./pages/admin/AdminLogin";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AdminActivityLogs from "./pages/admin/AdminActivityLogs";
 import { queryClient } from "./lib/queryClient";
+
+const Auth = React.lazy(() => import("./pages/Auth"));
+const Dashboard = React.lazy(() => import("./pages/Dashboard"));
+const AddTransaction = React.lazy(() => import("./pages/AddTransaction"));
+const Insights = React.lazy(() => import("./pages/Insights"));
+const CalendarView = React.lazy(() => import("./pages/CalendarView"));
+const Profile = React.lazy(() => import("./pages/Profile"));
+const Settings = React.lazy(() => import("./pages/Settings"));
+const CategoryManagement = React.lazy(() => import("./components/CategoryManagement"));
+const AllTransactionHistory = React.lazy(() => import("./pages/AllTransactionHistory"));
+const Budget = React.lazy(() => import("./pages/Budget"));
+const NotFound = React.lazy(() => import("./pages/NotFound"));
+const AdminLogin = React.lazy(() => import("./pages/admin/AdminLogin"));
+const AdminDashboard = React.lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminSettings = React.lazy(() => import("./pages/admin/AdminSettings"));
+const AdminActivityLogs = React.lazy(() => import("./pages/admin/AdminActivityLogs"));
+
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center gradient-dark" role="status">
+      Loading page...
+    </div>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -35,7 +43,8 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <Routes>
               {/* Admin Routes - Not affected by maintenance mode */}
               <Route path="/admin" element={<AdminLayout />}>
                 <Route path="login" element={<AdminLogin />} />
@@ -68,7 +77,8 @@ const App = () => (
                   </MaintenanceMode>
                 }
               />
-            </Routes>
+              </Routes>
+            </Suspense>
           </BrowserRouter>
         </AuthProvider>
       </AdminAuthProvider>

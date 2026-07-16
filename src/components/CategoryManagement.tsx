@@ -47,30 +47,20 @@ export default function CategoryManagement() {
     try {
       setLoading(true);
       
-      // Fetch categories with transaction counts
+      // The embedded count is filtered by the existing category and transaction RLS policies.
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
-        .select('*')
-        .eq('user_id', user?.id)
+        .select('*, transactions(count)')
+        .eq('user_id', user.id)
         .order('name');
 
       if (categoriesError) throw categoriesError;
 
-      // Fetch transaction counts for each category
-      const categoriesWithCounts = await Promise.all(
-        (categoriesData || []).map(async (category) => {
-          const { count } = await supabase
-            .from('transactions')
-            .select('*', { count: 'exact', head: true })
-            .eq('category_id', category.id);
-          
-          return { 
-            ...category, 
-            type: category.type as 'income' | 'expense',
-            transaction_count: count || 0 
-          };
-        })
-      );
+      const categoriesWithCounts = (categoriesData || []).map(({ transactions, ...category }) => ({
+        ...category,
+        type: category.type as 'income' | 'expense',
+        transaction_count: transactions?.[0]?.count ?? 0,
+      }));
 
       setCategories(categoriesWithCounts);
     } catch (error: unknown) {
