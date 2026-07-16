@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_supabase_integration:
+        description: Run the disposable local or staging Supabase integration gate.
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Unit, lint, typecheck, and build
+    runs-on: ubuntu-latest
+    env:
+      # These are non-secret CI fixtures used only by the production-build validator.
+      VITE_SUPABASE_URL: https://ci-build.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: ci-public-build-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - run: npx tsc -b
+      - run: npm run build
+
+  supabase-integration:
+    name: Optional disposable Supabase integration gate
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_supabase_integration == true }}
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Confirm the approved disposable target
+        run: |
+          echo "Run this gate only on a disposable local or staging Supabase target."
+          echo "Do not point it at production or use production credentials."
+          supabase --version
+      - name: Run Supabase integration tests
+        run: supabase test db
