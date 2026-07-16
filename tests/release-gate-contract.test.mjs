@@ -44,4 +44,6 @@ test('the release checklist makes the required operator-owned production checks 
   assert.match(checklist, /smoke test/i);
   assert.match(checklist, /credentials|production URL|target URL/i);
   assert.match(checklist, /not .*run|not .*validated|not .*verify/i);
+  assert.match(checklist, /disposable local.*integration/i);
+  assert.doesNotMatch(checklist, /staging/i);
 });

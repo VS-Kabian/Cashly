@@ -3,12 +3,13 @@
 
 BEGIN;
 
-SELECT plan(5);
+SELECT plan(8);
 
 DO $$
 DECLARE
   owner_user_id UUID := gen_random_uuid();
   other_user_id UUID := gen_random_uuid();
+  admin_user_id UUID := gen_random_uuid();
   owner_category_id UUID;
   other_category_id UUID;
   owner_budget_id UUID;
@@ -30,7 +31,21 @@ BEGIN
       format('cashly-financial-other-%s@example.test', other_user_id),
       '$2a$10$cashlyintegrationtestonly', now(),
       '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now()
+    ),
+    (
+      admin_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+      format('cashly-financial-admin-%s@example.test', admin_user_id),
+      '$2a$10$cashlyintegrationtestonly', now(),
+      '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now()
     );
+
+  INSERT INTO public.admins (email, user_id, full_name, is_active)
+  VALUES (
+    format('cashly-financial-admin-%s@example.test', admin_user_id),
+    admin_user_id,
+    'Local invariant administrator',
+    true
+  );
 
   -- The signup trigger creates defaults in the normal local schema. Seed a
   -- fallback inside this transaction so the test also remains self-contained
@@ -70,18 +85,29 @@ BEGIN
 
   PERFORM set_config('app.cashly_owner_user_id', owner_user_id::text, true);
   PERFORM set_config('app.cashly_other_user_id', other_user_id::text, true);
+  PERFORM set_config('app.cashly_admin_user_id', admin_user_id::text, true);
   PERFORM set_config('app.cashly_owner_category_id', owner_category_id::text, true);
   PERFORM set_config('app.cashly_owner_budget_id', owner_budget_id::text, true);
   PERFORM set_config('app.cashly_test_month', test_month::text, true);
   PERFORM set_config('app.cashly_test_year', test_year::text, true);
-  PERFORM set_config('request.jwt.claim.sub', other_user_id::text, true);
 END;
 $$;
+
+-- Use the same PostgreSQL role and JWT claim settings the local Supabase API
+-- supplies for an authenticated browser request.
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT set_config('request.jwt.claim.sub', current_setting('app.cashly_other_user_id'), true);
+SELECT set_config(
+  'request.jwt.claims',
+  json_build_object('sub', current_setting('app.cashly_other_user_id'), 'role', 'authenticated')::text,
+  true
+);
 
 SELECT throws_ok(
   $$
     INSERT INTO public.transactions (user_id, amount, type, transaction_date)
-    VALUES (current_setting('app.cashly_owner_user_id')::UUID, -1, 'expense', now())
+    VALUES (current_setting('app.cashly_other_user_id')::UUID, -1, 'expense', now())
   $$,
   '23514',
   NULL,
@@ -106,6 +132,45 @@ SELECT throws_ok(
 
 SELECT throws_ok(
   $$
+    INSERT INTO public.categories (user_id, name, type, color)
+    VALUES (
+      current_setting('app.cashly_owner_user_id')::UUID,
+      'Unauthorised cross-user category',
+      'expense',
+      '#EF4444'
+    )
+  $$,
+  '42501',
+  NULL,
+  'cross-user category writes are rejected for an authenticated user'
+);
+
+SELECT is(
+  (
+    SELECT count(*)
+    FROM public.transactions
+    WHERE user_id = current_setting('app.cashly_owner_user_id')::UUID
+  ),
+  0::BIGINT,
+  'RLS hides another user''s transactions from an authenticated user'
+);
+
+SELECT throws_ok(
+  $$ SELECT public.get_admin_dashboard_analytics() $$,
+  '42501',
+  'Administrator access is required',
+  'a non-admin authenticated user cannot call the protected admin RPC'
+);
+
+SELECT set_config('request.jwt.claim.sub', current_setting('app.cashly_owner_user_id'), true);
+SELECT set_config(
+  'request.jwt.claims',
+  json_build_object('sub', current_setting('app.cashly_owner_user_id'), 'role', 'authenticated')::text,
+  true
+);
+
+SELECT throws_ok(
+  $$
     INSERT INTO public.budgets (user_id, amount, month, year, category_id)
     VALUES (
       current_setting('app.cashly_owner_user_id')::UUID,
@@ -118,6 +183,13 @@ SELECT throws_ok(
   '23505',
   NULL,
   'each user has at most one overall budget per month'
+);
+
+SELECT set_config('request.jwt.claim.sub', current_setting('app.cashly_other_user_id'), true);
+SELECT set_config(
+  'request.jwt.claims',
+  json_build_object('sub', current_setting('app.cashly_other_user_id'), 'role', 'authenticated')::text,
+  true
 );
 
 SELECT throws_ok(
@@ -135,18 +207,16 @@ SELECT throws_ok(
   'budget alerts cannot use another user''s budget'
 );
 
--- Execute a real browser-role read as the second user. RLS must hide the
--- transaction owned by the first disposable user.
-SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', current_setting('app.cashly_admin_user_id'), true);
+SELECT set_config(
+  'request.jwt.claims',
+  json_build_object('sub', current_setting('app.cashly_admin_user_id'), 'role', 'authenticated')::text,
+  true
+);
 
-SELECT is(
-  (
-    SELECT count(*)
-    FROM public.transactions
-    WHERE user_id = current_setting('app.cashly_owner_user_id')::UUID
-  ),
-  0::BIGINT,
-  'RLS hides another user''s transactions from an authenticated user'
+SELECT lives_ok(
+  $$ SELECT public.get_admin_dashboard_analytics() $$,
+  'Auth-linked active administrator can call the protected admin RPC'
 );
 
 SELECT * FROM finish();

@@ -7,7 +7,7 @@ Use this checklist for a production candidate only after the pull request releas
 - [ ] Record the release commit and pull request.
 - [ ] Confirm the pull-request CI job passed `npm test`, `npm run lint`, `npx tsc -b`, and `npm run build`.
 - [ ] Treat the CI build's Supabase values as non-secret build fixtures only. A green CI build confirms local public-environment validation; it does not validate a live Supabase project.
-- [ ] If database behavior changed, run the optional `supabase-integration` gate only on the approved disposable local or staging target. Record the target, test users, and result. Never run that gate against production.
+- [ ] If database behavior changed, run the optional `supabase-integration` gate only against the approved disposable local database. Record the local target, test users, and result. Never run that gate against a remote target or production.
 
 ## 2. Verify the secure migration sequence
 
@@ -16,7 +16,7 @@ Use this checklist for a production candidate only after the pull request releas
 - [ ] Stop on the first migration error; do not skip ahead or apply only the hardening migrations to an empty project.
 - [ ] Confirm the retired custom-password admin migration is absent and no administrator password is stored in `public.admins`.
 - [ ] Run the release's approved read-only production SQL checks and retain the output with the release record.
-- [ ] In a disposable local or staging project, prove schema order, RLS isolation, authenticated admin access, and financial constraints with the release's approved integration and validation scripts.
+- [ ] In the disposable local database, prove schema order, RLS isolation, authenticated admin access, and financial constraints with the release's approved integration and validation scripts.
 
 ## 3. Supabase Auth and administrator access
 

@@ -14,10 +14,11 @@ Run these files in the selected project’s SQL Editor, one complete file at a t
 
 1. `supabase/migrations/20250906124330_90ed8cf6-0f6d-4e5d-9d4a-4a3e4a32749e.sql`
 2. `supabase/migrations/20250911035754_c066283a-9eb8-44fb-883e-58fd67106d9f.sql`
-3. `supabase/migrations/20260712000000_secure_bootstrap_preflight.sql`
-4. `supabase/migrations/20260712000001_secure_admin_bootstrap.sql`
-5. `supabase/migrations/20260714000000_harden_admin_authorization.sql`
-6. `supabase/migrations/20260714000001_strengthen_financial_integrity.sql`
+3. `supabase/migrations/20250913060501_0cfd1ada-cab5-4a5a-8357-449c849b256a.sql`
+4. `supabase/migrations/20260712000000_secure_bootstrap_preflight.sql`
+5. `supabase/migrations/20260712000001_secure_admin_bootstrap.sql`
+6. `supabase/migrations/20260714000000_harden_admin_authorization.sql`
+7. `supabase/migrations/20260714000001_strengthen_financial_integrity.sql`
 
 The preflight migration must pass before privileged tables are created. If it reports missing core tables, stop and apply the listed earlier migration in this same project; do not skip ahead.
 
