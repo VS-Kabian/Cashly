@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,38 +43,7 @@ export default function CategoryManagement() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchCategories();
-      
-      // Set up real-time subscription for category changes
-      const channel = supabase
-        .channel('category-management-updates')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'categories',
-            filter: `user_id=eq.${user.id}`
-          },
-          () => {
-            fetchCategories();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [user]);
-
-  useEffect(() => {
-    filterCategories();
-  }, [categories, searchTerm, filterType]);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -104,7 +73,7 @@ export default function CategoryManagement() {
       );
 
       setCategories(categoriesWithCounts);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -113,9 +82,9 @@ export default function CategoryManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast, user]);
 
-  const filterCategories = () => {
+  const filterCategories = useCallback(() => {
     let filtered = categories;
     
     if (filterType !== 'all') {
@@ -129,9 +98,33 @@ export default function CategoryManagement() {
     }
     
     setFilteredCategories(filtered);
-  };
+  }, [categories, filterType, searchTerm]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    fetchCategories();
+    const channel = supabase
+      .channel('category-management-updates')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'categories', filter: `user_id=eq.${user.id}` },
+        fetchCategories,
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchCategories, user]);
+
+  useEffect(() => {
+    filterCategories();
+  }, [filterCategories]);
 
   const handleSaveCategory = async () => {
+    if (!user) return;
+
     try {
       setIsUpdating(true);
       
@@ -149,7 +142,7 @@ export default function CategoryManagement() {
             color: newCategory.color,
             type: newCategory.type,
             icon: newCategory.icon,
-            user_id: user?.id!
+            user_id: user.id
           };
 
       const { error } = editingCategory
@@ -177,7 +170,7 @@ export default function CategoryManagement() {
       setEditingCategory(null);
       setNewCategory({ name: '', color: '#9ACD32', type: 'expense', icon: '📄' });
       await fetchCategories(); // Wait for refresh to complete
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -203,7 +196,7 @@ export default function CategoryManagement() {
       });
 
       fetchCategories();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -244,7 +237,7 @@ export default function CategoryManagement() {
       });
 
       fetchCategories();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",

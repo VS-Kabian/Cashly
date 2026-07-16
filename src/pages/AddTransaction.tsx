@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -56,38 +56,7 @@ export default function AddTransaction() {
     transactionDate: toLocalDateKey(new Date())
   });
 
-  useEffect(() => {
-    fetchCategories();
-    
-    // Set up real-time subscription for category changes
-    const channel = supabase
-      .channel('category-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'categories',
-          filter: `user_id=eq.${user?.id}`
-        },
-        () => {
-          fetchCategories(); // Refresh categories on any change
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, transactionType]);
-
-  useEffect(() => {
-    if (transactionType === 'expense' && formData.amount) {
-      checkBudgetImpact();
-    }
-  }, [formData.amount, transactionType]);
-
-  const checkBudgetImpact = async () => {
+  const checkBudgetImpact = useCallback(async () => {
     if (!user || !formData.amount || transactionType !== 'expense') {
       setBudgetImpact(null);
       return;
@@ -134,9 +103,9 @@ export default function AddTransaction() {
     } catch (error) {
       console.error('Error checking budget impact:', error);
     }
-  };
+  }, [formData.amount, transactionType, user]);
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -153,14 +122,36 @@ export default function AddTransaction() {
         type: cat.type as 'income' | 'expense'
       }));
       setCategories(typedCategories);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to load categories"
       });
     }
-  };
+  }, [toast, transactionType, user]);
+
+  useEffect(() => {
+    fetchCategories();
+    const channel = supabase
+      .channel('category-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'categories', filter: `user_id=eq.${user?.id}` },
+        fetchCategories,
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchCategories, user?.id]);
+
+  useEffect(() => {
+    if (transactionType === 'expense' && formData.amount) {
+      checkBudgetImpact();
+    }
+  }, [checkBudgetImpact, formData.amount, transactionType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,7 +202,7 @@ export default function AddTransaction() {
       });
       
       navigate('/');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",

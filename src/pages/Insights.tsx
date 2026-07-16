@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,46 +31,7 @@ export default function Insights() {
   const [loading, setLoading] = useState(true);
   const [totalAmount, setTotalAmount] = useState(0);
 
-  useEffect(() => {
-    if (user) {
-      fetchInsightsData();
-      
-      // Set up real-time subscription for transaction and category changes
-      const channel = supabase
-        .channel('insights-updates')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'transactions',
-            filter: `user_id=eq.${user.id}`
-          },
-          () => {
-            fetchInsightsData();
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'categories',
-            filter: `user_id=eq.${user.id}`
-          },
-          () => {
-            fetchInsightsData();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [user, viewType, timeframe]);
-
-  const fetchInsightsData = async () => {
+  const fetchInsightsData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -112,7 +73,7 @@ export default function Insights() {
       const categoryMap = new Map<string, { total: number; color: string; icon?: string }>();
       let total = 0;
 
-      (transactions || []).forEach((transaction: any) => {
+      (transactions || []).forEach((transaction) => {
         const typedTransaction: Transaction = {
           ...transaction,
           type: transaction.type as 'income' | 'expense'
@@ -126,7 +87,8 @@ export default function Insights() {
         total += amount;
         
         if (categoryMap.has(categoryName)) {
-          categoryMap.get(categoryName)!.total += amount;
+          const category = categoryMap.get(categoryName);
+          if (category) category.total += amount;
         } else {
           categoryMap.set(categoryName, { total: amount, color: categoryColor, icon: categoryIcon });
         }
@@ -142,7 +104,7 @@ export default function Insights() {
 
       setChartData(data);
       setTotalAmount(total);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -151,7 +113,22 @@ export default function Insights() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeframe, toast, user?.id, viewType]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    void fetchInsightsData();
+    const channel = supabase
+      .channel('insights-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` }, fetchInsightsData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `user_id=eq.${user.id}` }, fetchInsightsData)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchInsightsData, user]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {

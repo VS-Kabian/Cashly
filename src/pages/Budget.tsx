@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,27 +62,7 @@ export default function Budget() {
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
 
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
-
-  const fetchData = async () => {
-    try {
-      await Promise.all([
-        fetchBudgets(),
-        fetchCategories(),
-        calculateSummary()
-      ]);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchBudgets = async () => {
+  const fetchBudgets = useCallback(async () => {
     const { data, error } = await supabase
       .from('budgets')
       .select(`
@@ -98,9 +78,9 @@ export default function Budget() {
 
     if (error) throw error;
     setBudgets(data || []);
-  };
+  }, [currentMonth, currentYear, user?.id]);
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     const { data, error } = await supabase
       .from('categories')
       .select('*')
@@ -109,9 +89,9 @@ export default function Budget() {
 
     if (error) throw error;
     setCategories(data || []);
-  };
+  }, [user?.id]);
 
-  const calculateSummary = async () => {
+  const calculateSummary = useCallback(async () => {
     try {
       // Get total budget for current month
       const { data: budgetData, error: budgetError } = await supabase
@@ -141,7 +121,7 @@ export default function Budget() {
       const totalSpent = transactionData?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
       const remaining = totalBudget - totalSpent;
       const lastDayOfMonth = new Date(endExclusive.getTime() - 1);
-      const daysLeft = Math.max(0, lastDayOfMonth.getDate() - currentDate.getDate() + 1);
+      const daysLeft = Math.max(0, lastDayOfMonth.getDate() - new Date().getDate() + 1);
       const dailyAllowance = daysLeft > 0 ? remaining / daysLeft : 0;
       const percentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
@@ -156,7 +136,23 @@ export default function Budget() {
     } catch (error) {
       console.error('Error calculating summary:', error);
     }
-  };
+  }, [currentMonth, currentYear, user?.id]);
+
+  const fetchData = useCallback(async () => {
+    try {
+      await Promise.all([fetchBudgets(), fetchCategories(), calculateSummary()]);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [calculateSummary, fetchBudgets, fetchCategories]);
+
+  useEffect(() => {
+    if (user) {
+      void fetchData();
+    }
+  }, [fetchData, user]);
 
   const handleAddBudget = async () => {
     if (!newBudgetAmount || !selectedCategory) {
@@ -217,11 +213,11 @@ export default function Budget() {
       setNewBudgetAmount('');
       setSelectedCategory('');
       await fetchData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message
+        description: error instanceof Error ? error.message : 'Failed to save budget'
       });
     } finally {
       setSaving(false);

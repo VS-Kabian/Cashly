@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,13 +24,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-    }
-  }, [user]);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -48,7 +42,7 @@ export default function Settings() {
           email: user?.email || ''
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -57,7 +51,13 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast, user]);
+
+  useEffect(() => {
+    if (user) {
+      void fetchProfile();
+    }
+  }, [fetchProfile, user]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +78,7 @@ export default function Settings() {
         title: "Success",
         description: "Profile updated successfully"
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -96,7 +96,7 @@ export default function Settings() {
         title: "Signed Out",
         description: "You have been signed out successfully"
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -117,7 +117,7 @@ export default function Settings() {
 
       if (error) throw error;
 
-      const csv = buildCsv((transactions || []) as any);
+      const csv = buildCsv(transactions ?? []);
       const csvBlob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(csvBlob);
       const link = document.createElement('a');
@@ -130,7 +130,7 @@ export default function Settings() {
         title: "Success",
         description: "Data exported successfully"
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",

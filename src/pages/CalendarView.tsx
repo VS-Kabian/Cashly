@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,13 +32,7 @@ export default function CalendarView() {
   const [loading, setLoading] = useState(true);
   const [monthlyStats, setMonthlyStats] = useState({ income: 0, expenses: 0, balance: 0 });
 
-  useEffect(() => {
-    if (user) {
-      fetchMonthTransactions();
-    }
-  }, [user, currentDate]);
-
-  const fetchMonthTransactions = async () => {
+  const fetchMonthTransactions = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -104,7 +98,7 @@ export default function CalendarView() {
         expenses,
         balance: income - expenses
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -113,7 +107,13 @@ export default function CalendarView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentDate, toast, user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      void fetchMonthTransactions();
+    }
+  }, [fetchMonthTransactions, user]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {

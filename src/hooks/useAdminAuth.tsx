@@ -1,24 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
-
-interface Admin {
-  id: string;
-  email: string;
-  full_name: string;
-  is_active: boolean;
-  last_login_at: string | null;
-}
-
-interface AdminAuthContextType {
-  admin: Admin | null;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signOut: () => Promise<void>;
-  logActivity: (actionType: string, description: string, metadata?: Record<string, Json | undefined>) => Promise<void>;
-}
-
-const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
+import { AdminAuthContext, type Admin } from './admin-auth-context';
 
 async function getActiveAdmin(userId: string): Promise<Admin | null> {
   const { data, error } = await supabase
@@ -151,12 +134,4 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AdminAuthContext.Provider>
   );
-}
-
-export function useAdminAuth() {
-  const context = useContext(AdminAuthContext);
-  if (context === undefined) {
-    throw new Error('useAdminAuth must be used within an AdminAuthProvider');
-  }
-  return context;
 }

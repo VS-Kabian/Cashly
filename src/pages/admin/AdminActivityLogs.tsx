@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,15 +38,7 @@ export default function AdminActivityLogs() {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState<string>('all');
 
-  useEffect(() => {
-    fetchActivityLogs();
-  }, []);
-
-  useEffect(() => {
-    filterLogs();
-  }, [searchTerm, actionFilter, logs]);
-
-  const fetchActivityLogs = async () => {
+  const fetchActivityLogs = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -71,9 +63,9 @@ export default function AdminActivityLogs() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filterLogs = () => {
+  const filterLogs = useCallback(() => {
     let filtered = [...logs];
 
     // Apply action type filter
@@ -93,7 +85,15 @@ export default function AdminActivityLogs() {
     }
 
     setFilteredLogs(filtered);
-  };
+  }, [actionFilter, logs, searchTerm]);
+
+  useEffect(() => {
+    void fetchActivityLogs();
+  }, [fetchActivityLogs]);
+
+  useEffect(() => {
+    filterLogs();
+  }, [filterLogs]);
 
   const getActionBadgeColor = (actionType: string) => {
     const colorMap: Record<string, string> = {

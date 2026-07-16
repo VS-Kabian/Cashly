@@ -87,7 +87,7 @@ export function TransactionEditModal({
 
       onSave();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -116,7 +116,7 @@ export function TransactionEditModal({
 
       onSave();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",

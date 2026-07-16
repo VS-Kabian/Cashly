@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { useAdminAuth } from '@/hooks/useAdminAuthContext';
 import { Button } from '@/components/ui/button';
 import { Loader2, LogOut, Shield, Settings, Activity, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';

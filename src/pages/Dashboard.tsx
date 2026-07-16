@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,13 +38,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      fetchDashboardData();
-    }
-  }, [user]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       // Fetch transactions with categories
       const { data: transactionsData, error } = await supabase
@@ -117,13 +111,39 @@ export default function Dashboard() {
       setDailyExpenses(todayExpenses);
 
       // Generate balance history for chart
-      const balanceHistory = generateBalanceHistory(typedTransactions);
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - i));
+        return toLocalDateKey(date);
+      });
+      const balanceHistory = last7Days.map((date) => {
+        const dayBalance = typedTransactions
+          .filter((transaction) => toLocalDateKey(new Date(transaction.transaction_date)) === date)
+          .reduce((sum, transaction) => transaction.type === 'income'
+            ? sum + Number(transaction.amount)
+            : sum - Number(transaction.amount), 0);
+        return {
+          date: new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' }),
+          balance: dayBalance,
+        };
+      });
       setBalanceData(balanceHistory);
 
       // Fetch and calculate budget summary
-      await fetchBudgetSummary(typedTransactions);
+      const budgetMonth = new Date().getMonth() + 1;
+      const budgetYear = new Date().getFullYear();
+      const { data: budgetData, error: budgetError } = await supabase
+        .from('budgets')
+        .select('amount, category_id')
+        .eq('user_id', user?.id)
+        .eq('month', budgetMonth)
+        .eq('year', budgetYear);
+      if (budgetError) throw budgetError;
+      if (budgetData && budgetData.length > 0) {
+        setBudgetSummary(calculateBudgetSummary(budgetData, typedTransactions, budgetMonth, budgetYear));
+      }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -132,7 +152,13 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast, user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      void fetchDashboardData();
+    }
+  }, [fetchDashboardData, user]);
 
   const fetchBudgetSummary = async (transactions: Transaction[]) => {
     try {

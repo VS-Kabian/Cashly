@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -30,14 +30,7 @@ export default function Profile() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-      fetchStats();
-    }
-  }, [user]);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -55,16 +48,16 @@ export default function Profile() {
           email: user?.email || ''
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to load profile"
       });
     }
-  };
+  }, [toast, user]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       // Get transaction count
       const { count: transactionCount, error: transactionError } = await supabase
@@ -100,12 +93,19 @@ export default function Profile() {
         categoriesCount: categoriesCount || 0,
         budgetCount: budgetCount || 0
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch stats:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      void fetchProfile();
+      void fetchStats();
+    }
+  }, [fetchProfile, fetchStats, user]);
 
   const getInitials = (name: string) => {
     return name
