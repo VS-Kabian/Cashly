@@ -19,13 +19,16 @@ test('pull requests run the offline release gate without embedding Supabase cred
   assert.doesNotMatch(workflow, /secrets\.|SUPABASE_SERVICE_ROLE|VITE_SUPABASE.*(?:eyJ|sb_)/i);
 });
 
-test('the Supabase integration gate is manual and explicitly limited to a disposable target', () => {
+test('the Supabase integration gate is manual and runs the local-only disposable harness', () => {
   const workflow = read('.github/workflows/ci.yml');
 
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /run_supabase_integration:/);
-  assert.match(workflow, /disposable|local|staging/i);
-  assert.match(workflow, /supabase test db/);
+  assert.match(workflow, /runs-on: ubuntu-latest/);
+  assert.match(workflow, /CASHLY_RUN_SUPABASE_INTEGRATION: '1'/);
+  assert.match(workflow, /CASHLY_SUPABASE_TARGET: local/);
+  assert.match(workflow, /npm run test:integration/);
+  assert.doesNotMatch(workflow, /runs-on: self-hosted/);
 });
 
 test('the release checklist makes the required operator-owned production checks explicit', () => {

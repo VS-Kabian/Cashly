@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       run_supabase_integration:
-        description: Run the disposable local or staging Supabase integration gate.
+        description: Run the disposable local Supabase integration gate.
         required: true
         default: false
         type: boolean
@@ -36,7 +36,7 @@ jobs:
   supabase-integration:
     name: Optional disposable Supabase integration gate
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_supabase_integration == true }}
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -44,10 +44,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Confirm the approved disposable target
-        run: |
-          echo "Run this gate only on a disposable local or staging Supabase target."
-          echo "Do not point it at production or use production credentials."
-          supabase --version
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
       - name: Run Supabase integration tests
-        run: supabase test db
+        env:
+          CASHLY_RUN_SUPABASE_INTEGRATION: '1'
+          CASHLY_SUPABASE_TARGET: local
+        run: npm run test:integration

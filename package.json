@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "test": "node --test",
+    "test:integration": "node scripts/run-supabase-integration-tests.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

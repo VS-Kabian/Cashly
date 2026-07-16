@@ -108,6 +108,8 @@ Expected result: the three ownership triggers are present, policies target `auth
 
 ## RLS and write-path smoke checks
 
+For a stronger database check, use the local-only harness in `Docs/LOCAL_SUPABASE_TESTING.md`. It starts and resets a disposable local Supabase stack, creates its own disposable Auth users, and runs `supabase/tests/financial_invariants.sql` inside a rollback-only transaction. Do not run it as a substitute for the production read-only checks in `SUPABASE_VALIDATION.sql`.
+
 With User A and User B, each using their own normal Supabase Auth session:
 
 1. User A creates a category, transaction, budget, and budget alert.
