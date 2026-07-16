@@ -13,7 +13,7 @@
 
 **Goal:** Verify that the real database matches the committed schema before production traffic uses it.
 
-- [ ] Choose one Supabase project reference for production and verify it matches both `supabase/config.toml` and Vercel's `VITE_SUPABASE_URL`.
+- [x] Choose one Supabase project reference for production and verify it matches both `supabase/config.toml` and Vercel's `VITE_SUPABASE_URL` (`fzeuatalikgawourvkqc`, verified on 2026-07-16).
 - [x] Install the Supabase CLI and start Docker Desktop.
 - [x] Run the local-only integration harness with `CASHLY_RUN_SUPABASE_INTEGRATION=1`, `CASHLY_SUPABASE_TARGET=local`, and `npm run test:integration`.
 - [ ] For a fresh project, apply the nine-file sequence in [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md) without skipping migrations.
