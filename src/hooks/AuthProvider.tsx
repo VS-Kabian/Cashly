@@ -3,6 +3,17 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthContext } from './auth-context';
 
+async function recordUserActivity(userId: string) {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ last_active_at: new Date().toISOString() })
+    .eq('user_id', userId);
+
+  if (error) {
+    console.warn('Unable to record user activity:', error.message);
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -13,12 +24,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       setLoading(false);
+      if (nextSession?.user) void recordUserActivity(nextSession.user.id);
     });
 
     supabase.auth.getSession().then(({ data: { session: nextSession } }) => {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       setLoading(false);
+      if (nextSession?.user) void recordUserActivity(nextSession.user.id);
     });
 
     return () => subscription.unsubscribe();

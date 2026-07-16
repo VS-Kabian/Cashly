@@ -20,6 +20,7 @@ Run these files in the selected project’s SQL Editor, one complete file at a t
 6. `supabase/migrations/20260714000000_harden_admin_authorization.sql`
 7. `supabase/migrations/20260714000001_strengthen_financial_integrity.sql`
 8. `supabase/migrations/20260716000000_repair_admin_authorization_contracts.sql`
+9. `supabase/migrations/20260716000001_repair_profile_activity_contract.sql`
 
 The preflight migration must pass before privileged tables are created. If it reports missing core tables, stop and apply the listed earlier migration in this same project; do not skip ahead.
 

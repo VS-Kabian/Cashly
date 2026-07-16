@@ -15,6 +15,8 @@ This release contains Phases 1-9 hardening: Supabase Auth-backed admin access, f
    5. `20260712000001_secure_admin_bootstrap.sql`
    6. `20260714000000_harden_admin_authorization.sql`
    7. `20260714000001_strengthen_financial_integrity.sql`
+   8. `20260716000000_repair_admin_authorization_contracts.sql`
+   9. `20260716000001_repair_profile_activity_contract.sql`
 3. Before applying the financial-integrity migration, resolve any duplicate overall budgets for the same `(user_id, month, year)`. The migration intentionally stops instead of deleting or choosing financial records.
 4. Ensure every intended administrator has an Auth user and that `admins.user_id` is linked to that Auth user before removing the retired password-RPC workflow.
 5. Run `npm test`, `npx tsc -b`, and `npm run build` from the release candidate. Check `git diff --check` as well.

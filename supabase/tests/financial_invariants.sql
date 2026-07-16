@@ -3,13 +3,31 @@
 
 BEGIN;
 
-SELECT plan(11);
+SELECT plan(15);
 
 SELECT has_column(
   'public',
   'admins',
   'last_login_at',
   'admins retains the last_login_at column used by the administrator resolver'
+);
+
+SELECT has_column(
+  'public',
+  'profiles',
+  'last_active_at',
+  'profiles retains the activity column used by administrator analytics'
+);
+
+SELECT ok(
+  (
+    SELECT is_nullable = 'NO' AND column_default IS NOT NULL
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'profiles'
+      AND column_name = 'last_active_at'
+  ),
+  'profile activity timestamps are non-null and initialized by default'
 );
 
 DO $$
@@ -160,6 +178,25 @@ SELECT is(
   ),
   0::BIGINT,
   'RLS hides another user''s transactions from an authenticated user'
+);
+
+SELECT lives_ok(
+  $$
+    UPDATE public.profiles
+    SET last_active_at = NOW()
+    WHERE user_id = current_setting('app.cashly_other_user_id')::UUID
+  $$,
+  'an authenticated user can record activity only for their own profile'
+);
+
+SELECT is_empty(
+  $$
+    UPDATE public.profiles
+    SET last_active_at = NOW()
+    WHERE user_id = current_setting('app.cashly_owner_user_id')::UUID
+    RETURNING 1
+  $$,
+  'RLS prevents an authenticated user from recording activity for another profile'
 );
 
 SET LOCAL ROLE anon;

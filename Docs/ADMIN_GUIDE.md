@@ -2,7 +2,7 @@
 
 Cashly administrators use **Supabase Auth**. Browser storage and retired custom-password RPCs are not authorization mechanisms and must not be restored.
 
-Follow [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md) to install the base schema, secure administrator tables, `supabase/migrations/20260714000000_harden_admin_authorization.sql`, and financial integrity migration in order.
+Follow the complete, ordered migration sequence in [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md), including `supabase/migrations/20260714000000_harden_admin_authorization.sql` and the forward-only administrator and profile-activity repair migrations.
 
 ## Create or relink an administrator
 

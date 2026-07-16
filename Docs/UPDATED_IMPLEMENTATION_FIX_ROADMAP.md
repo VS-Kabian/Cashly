@@ -7,16 +7,16 @@
 - Secure Auth-linked administration, financial-integrity constraints, RLS contract checks, and a forward admin-authorization repair.
 - Confirmations for destructive category and transaction actions.
 - Lint cleanup, route-level lazy loading, category aggregate counts, CI quality gate, release checklist, and local-only Supabase integration harness.
-- Local verification: unit/contract tests, lint, TypeScript, and production Vite build. GitHub CI also passed these quality checks for commit `6644705`.
+- Local verification: unit/contract tests, TypeScript, production Vite build, and the disposable Supabase integration harness (12 pgTAP assertions). GitHub CI also passed its quality checks for commit `6644705`.
 
 ## Release Gate 1 — Prove the intended Supabase environment
 
 **Goal:** Verify that the real database matches the committed schema before production traffic uses it.
 
 - [ ] Choose one Supabase project reference for production and verify it matches both `supabase/config.toml` and Vercel's `VITE_SUPABASE_URL`.
-- [ ] Install the Supabase CLI and start Docker Desktop.
-- [ ] Run the local-only integration harness with `CASHLY_RUN_SUPABASE_INTEGRATION=1`, `CASHLY_SUPABASE_TARGET=local`, and `npm run test:integration`.
-- [ ] For a fresh project, apply the eight-file sequence in [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md) without skipping migrations.
+- [x] Install the Supabase CLI and start Docker Desktop.
+- [x] Run the local-only integration harness with `CASHLY_RUN_SUPABASE_INTEGRATION=1`, `CASHLY_SUPABASE_TARGET=local`, and `npm run test:integration`.
+- [ ] For a fresh project, apply the nine-file sequence in [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md) without skipping migrations.
 - [ ] For an existing project, inspect migration history and data first; apply only the missing forward migrations under an approved change record.
 - [ ] Run [SUPABASE_VALIDATION.sql](SUPABASE_VALIDATION.sql) against the selected project and retain the output.
 
