@@ -24,12 +24,6 @@ export default defineConfig(({ mode }) => ({
           vendor: ['react', 'react-dom'],
           supabase: ['@supabase/supabase-js'],
           ui: ['@radix-ui/react-dialog', '@radix-ui/react-toast', '@radix-ui/react-tabs'],
-          'admin-pages': [
-            path.resolve(__dirname, 'src/pages/admin/AdminLogin.tsx'),
-            path.resolve(__dirname, 'src/pages/admin/AdminDashboard.tsx'),
-            path.resolve(__dirname, 'src/pages/admin/AdminSettings.tsx'),
-            path.resolve(__dirname, 'src/pages/admin/AdminActivityLogs.tsx'),
-          ],
         },
       },
     },

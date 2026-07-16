@@ -54,9 +54,9 @@ test('category counts use one RLS-scoped aggregate relation read instead of a re
   assert.doesNotMatch(categories, /head:\s*true/);
 });
 
-test('Vite keeps admin routes in a deferred chunk group', async () => {
+test('Vite leaves lazy admin routes out of initial-load chunk groups', async () => {
   const config = await source('vite.config.ts');
 
-  assert.match(config, /'admin-pages':\s*\[/);
-  assert.match(config, /pages\/admin\/AdminDashboard\.tsx/);
+  assert.doesNotMatch(config, /'admin-pages':\s*\[/);
+  assert.doesNotMatch(config, /pages\/admin\/Admin(?:Login|Dashboard|Settings|ActivityLogs)\.tsx/);
 });
