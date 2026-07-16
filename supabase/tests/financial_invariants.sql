@@ -3,7 +3,14 @@
 
 BEGIN;
 
-SELECT plan(8);
+SELECT plan(11);
+
+SELECT has_column(
+  'public',
+  'admins',
+  'last_login_at',
+  'admins retains the last_login_at column used by the administrator resolver'
+);
 
 DO $$
 DECLARE
@@ -155,6 +162,23 @@ SELECT is(
   'RLS hides another user''s transactions from an authenticated user'
 );
 
+SET LOCAL ROLE anon;
+SELECT throws_ok(
+  $$ SELECT private.current_admin_id() $$,
+  '42501',
+  NULL,
+  'an anonymous caller cannot execute the private admin resolver'
+);
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT set_config('request.jwt.claim.sub', current_setting('app.cashly_other_user_id'), true);
+SELECT set_config(
+  'request.jwt.claims',
+  json_build_object('sub', current_setting('app.cashly_other_user_id'), 'role', 'authenticated')::text,
+  true
+);
+
 SELECT throws_ok(
   $$ SELECT public.get_admin_dashboard_analytics() $$,
   '42501',
@@ -212,6 +236,11 @@ SELECT set_config(
   'request.jwt.claims',
   json_build_object('sub', current_setting('app.cashly_admin_user_id'), 'role', 'authenticated')::text,
   true
+);
+
+SELECT lives_ok(
+  $$ SELECT private.current_admin_id() $$,
+  'Auth-linked active administrator can execute the private admin resolver'
 );
 
 SELECT lives_ok(

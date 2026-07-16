@@ -18,6 +18,7 @@ test('the supported deployment runbook applies every required migration in order
     '20260712000001_secure_admin_bootstrap.sql',
     '20260714000000_harden_admin_authorization.sql',
     '20260714000001_strengthen_financial_integrity.sql',
+    'repair_admin_authorization_contracts.sql',
   ];
 
   let previousIndex = -1;

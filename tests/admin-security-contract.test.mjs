@@ -1,11 +1,18 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relativePath) => readFileSync(path.join(root, relativePath), 'utf8');
+const repairMigration = () => {
+  const migration = readdirSync(path.join(root, 'supabase', 'migrations'))
+    .find((file) => /_repair_admin_authorization_contracts\.sql$/.test(file));
+
+  assert.ok(migration, 'the forward-only admin authorization repair migration must exist');
+  return read(`supabase/migrations/${migration}`);
+};
 
 test('admin authorization migration links admins to Supabase Auth and removes broad policies', () => {
   const migration = read('supabase/migrations/20260714000000_harden_admin_authorization.sql');
@@ -39,6 +46,16 @@ test('admin authorization migration revokes public access to privileged RPCs', (
   assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.get_admin_dashboard_analytics\(\) TO authenticated/);
   assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.get_top_categories\(INT\) TO authenticated/);
   assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.log_admin_activity\(TEXT, TEXT, JSONB\) TO authenticated/);
+});
+
+test('the forward-only admin authorization repair restores the resolver column and only active admin helper access', () => {
+  const migration = repairMigration();
+
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ/);
+  assert.match(migration, /REVOKE ALL ON FUNCTION private\.current_admin_id\(\) FROM PUBLIC, anon, authenticated/);
+  assert.match(migration, /GRANT USAGE ON SCHEMA private TO authenticated/);
+  assert.match(migration, /GRANT EXECUTE ON FUNCTION private\.current_admin_id\(\) TO authenticated/);
+  assert.doesNotMatch(migration, /GRANT (?:USAGE ON SCHEMA private|EXECUTE ON FUNCTION private\.current_admin_id\(\)) TO anon/);
 });
 
 test('admin frontend uses a verified Supabase session instead of browser-controlled state', () => {
